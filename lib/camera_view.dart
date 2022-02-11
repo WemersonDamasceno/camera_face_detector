@@ -24,7 +24,7 @@ class CameraView extends StatefulWidget {
 }
 
 class _CameraViewState extends State<CameraView> {
-  late CameraController _controller;
+  //late CameraController _controller;
 
   final int _cameraIndex = 1;
 
@@ -50,7 +50,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
-    if (_controller.value.isInitialized == false) {
+    if (cameraControllerGlobal.value.isInitialized == false) {
       return Container();
     }
     return Container(
@@ -58,7 +58,7 @@ class _CameraViewState extends State<CameraView> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          CameraPreview(_controller),
+          CameraPreview(cameraControllerGlobal),
           if (widget.customPaint != null) widget.customPaint!,
         ],
       ),
@@ -67,17 +67,17 @@ class _CameraViewState extends State<CameraView> {
 
   Future _startLiveFeed() async {
     final camera = cameras[_cameraIndex];
-    _controller = CameraController(
+    cameraControllerGlobal = CameraController(
       camera,
       ResolutionPreset.low,
       enableAudio: false,
     );
 
-    _controller.initialize().then((_) {
+    cameraControllerGlobal.initialize().then((_) {
       if (!mounted) {
         return;
       }
-      _controller.startImageStream(_processCameraImage);
+      cameraControllerGlobal.startImageStream(_processCameraImage);
       setState(() {});
     });
   }

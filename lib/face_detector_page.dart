@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
 
 import 'camera_view.dart';
+import 'main.dart';
 
 int qtdFoto = 0;
 bool isFotoEsquerda = false;
@@ -54,7 +55,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     final faces = await faceDetector.processImage(inputImage);
 
     if (qtdFoto > 0) {
-      //final imagem = await _controller?.takePicture();
+      final imagem = await cameraControllerGlobal.takePicture();
+      qtdFoto = 0;
     }
 
     if (faces.length > 1) {
@@ -116,12 +118,12 @@ class FaceDetectorPainter extends CustomPainter {
             //Quando virar o rosto pra direita ou pra esquerda
             if (qtdFoto == 0) {
               if (point.dx < 80) {
-                //qtdFoto = 1;
+                qtdFoto = 1;
                 print("Moveu para a direita: $point");
                 print("QTD: $qtdFoto");
               } else if (point.dx > 150) {
                 print("Moveu para a esquerda: $point");
-                //qtdFoto = 1;
+                qtdFoto = 1;
                 print("QTD: $qtdFoto");
                 //imagem = await _controller?.takePicture();
               }
