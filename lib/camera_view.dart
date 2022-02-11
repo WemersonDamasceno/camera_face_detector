@@ -5,8 +5,6 @@ import 'package:flutter/material.dart';
 
 import 'main.dart';
 
-CameraController? _controller;
-
 class CameraView extends StatefulWidget {
   const CameraView(
       {Key? key,
@@ -26,6 +24,8 @@ class CameraView extends StatefulWidget {
 }
 
 class _CameraViewState extends State<CameraView> {
+  late CameraController _controller;
+
   final int _cameraIndex = 1;
 
   @override
@@ -50,7 +50,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
-    if (_controller?.value.isInitialized == false) {
+    if (_controller.value.isInitialized == false) {
       return Container();
     }
     return Container(
@@ -58,7 +58,7 @@ class _CameraViewState extends State<CameraView> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          CameraPreview(_controller!),
+          CameraPreview(_controller),
           if (widget.customPaint != null) widget.customPaint!,
         ],
       ),
@@ -72,11 +72,12 @@ class _CameraViewState extends State<CameraView> {
       ResolutionPreset.low,
       enableAudio: false,
     );
-    _controller?.initialize().then((_) {
+
+    _controller.initialize().then((_) {
       if (!mounted) {
         return;
       }
-      _controller?.startImageStream(_processCameraImage);
+      _controller.startImageStream(_processCameraImage);
       setState(() {});
     });
   }

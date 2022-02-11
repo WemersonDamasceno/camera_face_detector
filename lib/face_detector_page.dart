@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 import 'dart:io';
+import 'package:camera_face_detection/controllers/controller.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
@@ -35,7 +36,9 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   @override
   Widget build(BuildContext context) {
+    //ControllerCamera controllerCamera = ControllerCamera();
     return CameraView(
+      //controller: controllerCamera,
       title: 'Face Detector',
       customPaint: customPaint,
       onImage: (inputImage) {
