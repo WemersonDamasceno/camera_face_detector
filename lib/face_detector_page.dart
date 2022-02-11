@@ -124,34 +124,10 @@ class FaceDetectorPainter extends CustomPainter {
               }
             }
           }
-          //Pintar os pontos
-
-          // canvas.drawCircle(
-          //     Offset(
-          //       translateX(point.dx, rotation, size, absoluteImageSize),
-          //       translateY(point.dy, rotation, size, absoluteImageSize),
-          //     ),
-          //     1,
-          //     paint);
         }
       }
 
       paintContour(FaceContourType.noseBottom);
-
-      //paintContour(FaceContourType.face);
-      // paintContour(FaceContourType.leftEyebrowTop);
-      // paintContour(FaceContourType.leftEyebrowBottom);
-      // paintContour(FaceContourType.rightEyebrowTop);
-      // paintContour(FaceContourType.rightEyebrowBottom);
-      // paintContour(FaceContourType.leftEye);
-      // paintContour(FaceContourType.rightEye);
-      // paintContour(FaceContourType.upperLipTop);
-      // paintContour(FaceContourType.upperLipBottom);
-      // paintContour(FaceContourType.lowerLipTop);
-      // paintContour(FaceContourType.lowerLipBottom);
-      // paintContour(FaceContourType.noseBridge);
-      // paintContour(FaceContourType.leftCheek);
-      // paintContour(FaceContourType.rightCheek);
     }
   }
 
