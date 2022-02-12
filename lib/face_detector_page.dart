@@ -1,12 +1,12 @@
 // ignore_for_file: avoid_print
 import 'dart:io';
-import 'package:camera_face_detection/controllers/controller.dart';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
+import 'package:screenshot/screenshot.dart';
 
 import 'camera_view.dart';
-import 'main.dart';
 
 int qtdFoto = 0;
 bool isFotoEsquerda = false;
@@ -26,6 +26,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     enableContours: true,
     enableClassification: true,
   ));
+
+  ScreenshotController screenshotController = ScreenshotController();
   bool isBusy = false;
   CustomPaint? customPaint;
 
@@ -37,15 +39,16 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   @override
   Widget build(BuildContext context) {
-    //ControllerCamera controllerCamera = ControllerCamera();
-    return CameraView(
-      //controller: controllerCamera,
-      title: 'Face Detector',
-      customPaint: customPaint,
-      onImage: (inputImage) {
-        processImage(inputImage);
-      },
-      initialDirection: CameraLensDirection.front,
+    return Screenshot(
+      controller: screenshotController,
+      child: CameraView(
+        title: 'Face Detector',
+        customPaint: customPaint,
+        onImage: (inputImage) {
+          processImage(inputImage);
+        },
+        initialDirection: CameraLensDirection.front,
+      ),
     );
   }
 
@@ -55,8 +58,42 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     final faces = await faceDetector.processImage(inputImage);
 
     if (qtdFoto > 0) {
-      final imagem = await cameraControllerGlobal.takePicture();
+      //final imagem = await cameraControllerGlobal.takePicture();
+      //Ou tirar print
       qtdFoto = 0;
+      screenshotController.capture().then((image) {
+        Navigator.pop(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => ShowCapturedWidget(
+              context: ctx,
+              capturedImage: image!,
+            ),
+          ),
+        );
+      }).catchError((onError) {
+        print(onError);
+      });
+
+      // await screenshotController
+      //     .capture(delay: const Duration(milliseconds: 10))
+      //     .then((capturedImage) async {
+      //   //IR PRA TELA DO PRINT
+      //   //(Enviar o print pra API)
+      //   Navigator.pop(context);
+      //   Navigator.push(
+      //     context,
+      //     MaterialPageRoute(
+      //       builder: (ctx) => ShowCapturedWidget(
+      //         context: ctx,
+      //         capturedImage: capturedImage!,
+      //       ),
+      //     ),
+      //   );
+      // }).catchError((onError) {
+      //   print(onError);
+      // });
     }
 
     if (faces.length > 1) {
@@ -172,5 +209,28 @@ double translateY(
           (Platform.isIOS ? absoluteImageSize.height : absoluteImageSize.width);
     default:
       return y * size.height / absoluteImageSize.height;
+  }
+}
+
+class ShowCapturedWidget extends StatelessWidget {
+  final BuildContext context;
+  final Uint8List capturedImage;
+  const ShowCapturedWidget({
+    Key? key,
+    required this.context,
+    required this.capturedImage,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Captured widget screenshot"),
+      ),
+      body: Center(
+          child: capturedImage != null
+              ? Image.memory(capturedImage)
+              : Container()),
+    );
   }
 }
