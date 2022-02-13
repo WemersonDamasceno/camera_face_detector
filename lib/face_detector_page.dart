@@ -38,6 +38,11 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   }
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Screenshot(
       controller: screenshotController,
@@ -75,25 +80,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       }).catchError((onError) {
         print(onError);
       });
-
-      // await screenshotController
-      //     .capture(delay: const Duration(milliseconds: 10))
-      //     .then((capturedImage) async {
-      //   //IR PRA TELA DO PRINT
-      //   //(Enviar o print pra API)
-      //   Navigator.pop(context);
-      //   Navigator.push(
-      //     context,
-      //     MaterialPageRoute(
-      //       builder: (ctx) => ShowCapturedWidget(
-      //         context: ctx,
-      //         capturedImage: capturedImage!,
-      //       ),
-      //     ),
-      //   );
-      // }).catchError((onError) {
-      //   print(onError);
-      // });
     }
 
     if (faces.length > 1) {

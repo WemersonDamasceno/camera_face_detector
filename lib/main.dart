@@ -9,15 +9,9 @@ import 'package:screenshot/screenshot.dart';
 import 'face_detector_page.dart';
 
 List<CameraDescription> cameras = [];
-CameraController cameraControllerGlobal = CameraController(
-  cameras[1],
-  ResolutionPreset.low,
-  enableAudio: false,
-);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   cameras = await availableCameras();
   runApp(const MyApp());
 }

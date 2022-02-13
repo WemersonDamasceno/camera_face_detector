@@ -1,4 +1,5 @@
 import 'package:camera/camera.dart';
+import 'package:camera_face_detection/controllers/controller.dart';
 import 'package:camera_process/camera_process.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,7 @@ class CameraView extends StatefulWidget {
 
 class _CameraViewState extends State<CameraView> {
   final int _cameraIndex = 1;
+  ControllerCamera controllerCamera = ControllerCamera();
 
   @override
   void initState() {
@@ -48,7 +50,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
-    if (cameraControllerGlobal.value.isInitialized == false) {
+    if (!controllerCamera.isInited) {
       return Container();
     }
     return Container(
@@ -56,7 +58,7 @@ class _CameraViewState extends State<CameraView> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          CameraPreview(cameraControllerGlobal),
+          CameraPreview(controllerCamera.controller),
           if (widget.customPaint != null) widget.customPaint!,
         ],
       ),
@@ -64,18 +66,18 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Future _startLiveFeed() async {
-    final camera = cameras[_cameraIndex];
-    cameraControllerGlobal = CameraController(
-      camera,
-      ResolutionPreset.low,
-      enableAudio: false,
-    );
+    // final camera = cameras[_cameraIndex];
+    // cameraControllerGlobal = CameraController(
+    //   camera,
+    //   ResolutionPreset.low,
+    //   enableAudio: false,
+    // );
 
-    cameraControllerGlobal.initialize().then((_) {
+    controllerCamera.iniciarControllerCamera().then((_) {
       if (!mounted) {
         return;
       }
-      cameraControllerGlobal.startImageStream(_processCameraImage);
+      controllerCamera.controller.startImageStream(_processCameraImage);
       setState(() {});
     });
   }
