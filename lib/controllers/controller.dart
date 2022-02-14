@@ -12,13 +12,17 @@ class ControllerCamera {
     WidgetsBinding.instance?.addPostFrameCallback((_) async {
       final cameras = await availableCameras();
       controller = CameraController(cameras[1], ResolutionPreset.medium);
-      controller.initialize().then((value) => isInited = true);
     });
   }
 
-  Future<void> takePicture() async {
+  Future<String> takePicture() async {
     String url = "";
     join((await getTemporaryDirectory()).path, '${DateTime.now()}.png');
     await controller.takePicture().then((res) => {url = res.path});
+    return url;
+  }
+
+  Future<void> startImage(processCameraImage) async {
+    await controller.startImageStream(processCameraImage);
   }
 }

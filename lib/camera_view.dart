@@ -25,9 +25,6 @@ class CameraView extends StatefulWidget {
 }
 
 class _CameraViewState extends State<CameraView> {
-  final int _cameraIndex = 1;
-  ControllerCamera controllerCamera = ControllerCamera();
-
   @override
   void initState() {
     super.initState();
@@ -50,7 +47,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
-    if (!controllerCamera.isInited) {
+    if (!ControllerCamera.instance.isInited) {
       return Container();
     }
     return Container(
@@ -58,7 +55,7 @@ class _CameraViewState extends State<CameraView> {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          CameraPreview(controllerCamera.controller),
+          CameraPreview(ControllerCamera.instance.controller),
           if (widget.customPaint != null) widget.customPaint!,
         ],
       ),
@@ -66,18 +63,16 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Future _startLiveFeed() async {
-    // final camera = cameras[_cameraIndex];
-    // cameraControllerGlobal = CameraController(
-    //   camera,
-    //   ResolutionPreset.low,
-    //   enableAudio: false,
-    // );
-
-    controllerCamera.iniciarControllerCamera().then((_) {
+    await ControllerCamera.instance.iniciarControllerCamera().then((_) {
       if (!mounted) {
         return;
       }
-      controllerCamera.controller.startImageStream(_processCameraImage);
+      ControllerCamera.instance.controller.initialize().then((value) {
+        setState(() {
+          ControllerCamera.instance.isInited = true;
+        });
+      });
+      ControllerCamera.instance.startImage(_processCameraImage);
       setState(() {});
     });
   }
@@ -92,7 +87,7 @@ class _CameraViewState extends State<CameraView> {
     final Size imageSize =
         Size(image.width.toDouble(), image.height.toDouble());
 
-    final camera = cameras[_cameraIndex];
+    final camera = cameras[1];
     final imageRotation =
         InputImageRotationMethods.fromRawValue(camera.sensorOrientation) ??
             InputImageRotation.Rotation_0deg;
