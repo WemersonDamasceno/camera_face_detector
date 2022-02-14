@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'main.dart';
 
@@ -126,15 +128,20 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
     if (qtdFoto > 0) {
       print("TIROU A FOTO!");
-      XFile imagem = await _controller!.takePicture();
+      final path =
+          join((await getTemporaryDirectory()).path, '${DateTime.now()}.png');
+      await _controller!.takePicture().then((res) => {
+            //res.path tem o caminho da foto
+            print("Caminho da imagem: ${res.path}")
+          });
     }
 
-    if (faces.length > 1) {
-      const snackBar = SnackBar(
-        content: Text('Existe mais de uma pessoa na frente da camera!'),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    }
+    // if (faces.length > 1) {
+    //   const snackBar = SnackBar(
+    //     content: Text('Existe mais de uma pessoa na frente da camera!'),
+    //   );
+    //   ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    // }
     if (inputImage.inputImageData?.size != null &&
         inputImage.inputImageData?.imageRotation != null) {
       final painter = FaceDetectorPainter(
