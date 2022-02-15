@@ -1,11 +1,13 @@
 // ignore_for_file: avoid_print
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:camera_face_detection/temp_file.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import 'main.dart';
@@ -159,20 +161,33 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     }
     //Não?
     else {
-      takeAPicture(proximaFoto, inputImage);
+      await takeAPicture(proximaFoto, inputImage);
     }
   }
 
   //Tirar a foto
-  void takeAPicture(int lado, InputImage inputImage) {
+  Future<void> takeAPicture(int lado, InputImage inputImage) async {
     if (lado == nFRENTE) {
       setState(() {
         isFotoFrente = true;
         bytesImagemFrente = inputImage.bytes;
         proximaFoto = 0;
         print("FRENTE caminho da imagem: $bytesImagemFrente");
-        print("FRENTE caminho da imagem: $bytesImagemFrente");
       });
+      Uint8List imgbytes = inputImage.bytes!;
+      final dir = inputImage.filePath!;
+      //Salvar arquivo temporario
+      final tempFile = File(path.join(dir, 'picture_${DateTime.now()}.jpg'));
+      await tempFile.writeAsBytes(imgbytes);
+      //Salvar arquivo temporario
+      print("Path da imagem: ${tempFile.path}");
+      //Goto pagina exibir imagem
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => TempFilePage(tempFile: tempFile)),
+      );
     } else if (lado == nESQUERDA) {
       setState(() async {
         isFotoEsquerda = true;
