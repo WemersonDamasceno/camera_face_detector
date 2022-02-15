@@ -174,15 +174,16 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
         proximaFoto = 0;
         print("FRENTE caminho da imagem: $bytesImagemFrente");
       });
+      //Pegando os bytes e o path da imagem
       Uint8List imgbytes = inputImage.bytes!;
-      final dir = inputImage.filePath!;
+      final dir = File.fromRawPath(imgbytes);
       //Salvar arquivo temporario
-      final tempFile = File(path.join(dir, 'picture_${DateTime.now()}.jpg'));
+      final tempFile =
+          File(path.join(dir.path, 'picture_${DateTime.now()}.jpg'));
       await tempFile.writeAsBytes(imgbytes);
-      //Salvar arquivo temporario
-      print("Path da imagem: ${tempFile.path}");
-      //Goto pagina exibir imagem
 
+      //Goto pagina exibir imagem
+      print("Path da imagem: ${tempFile.path}");
       Navigator.push(
         context,
         MaterialPageRoute(
