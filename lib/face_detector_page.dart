@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -9,13 +10,21 @@ import 'package:path_provider/path_provider.dart';
 
 import 'main.dart';
 
-int qtdFoto = 0;
+int proximaFoto = 0;
 bool isFotoEsquerda = false;
 bool isFotoDireita = false;
 bool isFotoFrente = false;
 
 //Camera View
 CameraController? _controller;
+var bytesImagemFrente;
+var bytesImagemEsquerda;
+var bytesImagemDireita;
+
+const int nFRENTE = 1;
+const int nESQUERDA = 2;
+const int nDIREITA = 3;
+const int nFINAL = 4;
 
 class FaceDetectorView extends StatefulWidget {
   const FaceDetectorView({Key? key}) : super(key: key);
@@ -34,6 +43,8 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   CustomPaint? customPaint;
 
   /*Camera View*/
+  //CAMERA TRASEIRA É 0
+  //CAMERA FRONTAL É 1
   final int _cameraIndex = 1;
   /*Camera View*/
 
@@ -126,22 +137,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     isBusy = true;
     final faces = await faceDetector.processImage(inputImage);
 
-    if (qtdFoto > 0) {
-      print("TIROU A FOTO!");
-      final path =
-          join((await getTemporaryDirectory()).path, '${DateTime.now()}.png');
-      await _controller!.takePicture().then((res) => {
-            //res.path tem o caminho da foto
-            print("Caminho da imagem: ${res.path}")
-          });
-    }
-
-    // if (faces.length > 1) {
-    //   const snackBar = SnackBar(
-    //     content: Text('Existe mais de uma pessoa na frente da camera!'),
-    //   );
-    //   ScaffoldMessenger.of(context).showSnackBar(snackBar);
-    // }
     if (inputImage.inputImageData?.size != null &&
         inputImage.inputImageData?.imageRotation != null) {
       final painter = FaceDetectorPainter(
@@ -155,6 +150,45 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     isBusy = false;
     if (mounted) {
       setState(() {});
+    }
+
+    //Todas as fotas foram tiradas
+    if (isFotoDireita && isFotoEsquerda && isFotoFrente) {
+      print("Todas as fotos já foram tiradas");
+      await _controller!.stopImageStream(); //Remover depois
+    }
+    //Não?
+    else {
+      takeAPicture(proximaFoto, inputImage);
+    }
+  }
+
+  //Tirar a foto
+  void takeAPicture(int lado, InputImage inputImage) {
+    if (lado == nFRENTE) {
+      setState(() {
+        isFotoFrente = true;
+        bytesImagemFrente = inputImage.bytes;
+        proximaFoto = 0;
+        print("FRENTE caminho da imagem: $bytesImagemFrente");
+        print("FRENTE caminho da imagem: $bytesImagemFrente");
+      });
+    } else if (lado == nESQUERDA) {
+      setState(() async {
+        isFotoEsquerda = true;
+        bytesImagemEsquerda = inputImage.bytes;
+        proximaFoto = 0;
+        print("ESQUERDA caminho da imagem: $bytesImagemEsquerda");
+        print("ESQUERDA caminho da imagem: $bytesImagemEsquerda");
+      });
+    } else if (lado == nDIREITA) {
+      setState(() {
+        isFotoDireita = true;
+        bytesImagemDireita = inputImage.bytes;
+        proximaFoto = nFINAL;
+        print("DIREITA caminho da imagem: $bytesImagemDireita");
+        print("DIREITA caminho da imagem: $bytesImagemDireita");
+      });
     }
   }
 }
@@ -188,20 +222,27 @@ class FaceDetectorPainter extends CustomPainter {
 
       void paintContour(FaceContourType type) async {
         final faceContour = face.getContour(type);
-
         for (Offset point in faceContour!.positionsList) {
           //Se o nariz for pro canto direito
           if (type == FaceContourType.noseBottom) {
-            //Quando virar o rosto pra direita ou pra esquerda
-            if (qtdFoto == 0) {
-              if (point.dx < 80) {
-                qtdFoto = 1;
-                print("Moveu para a direita: $point");
-                print("QTD: $qtdFoto");
-              } else if (point.dx > 150) {
-                print("Moveu para a esquerda: $point");
-                qtdFoto = 1;
-                print("QTD: $qtdFoto");
+            //Tirar primeiro foto da frente
+            if (point.dx < 130 && point.dx > 95) {
+              if (isFotoFrente == false) {
+                proximaFoto = nFRENTE;
+              }
+            }
+            //Tirar foto da direita
+            else if (point.dx < 80) {
+              if (isFotoDireita == false &&
+                  isFotoEsquerda == false &&
+                  isFotoFrente == true) {
+                proximaFoto = nDIREITA;
+              }
+            } else if (point.dx > 150) {
+              if (isFotoEsquerda == false &&
+                  isFotoDireita == true &&
+                  isFotoFrente == true) {
+                proximaFoto = nESQUERDA;
               }
             }
           }
