@@ -1,24 +1,20 @@
-// ignore_for_file: avoid_print
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:camera_face_detection/temp_file.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
-import 'package:path/path.dart' as path;
+import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+import 'package:image/image.dart' as imglib;
 
-import 'main.dart';
+import 'camera_view.dart';
 
 int proximaFoto = 0;
 bool isFotoEsquerda = false;
 bool isFotoDireita = false;
 bool isFotoFrente = false;
 
-//Camera View
-CameraController? _controller;
 var bytesImagemFrente;
 var bytesImagemEsquerda;
 var bytesImagemDireita;
@@ -53,7 +49,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   @override
   void initState() {
     super.initState();
-    _startLiveFeed();
   }
 
   @override
@@ -62,82 +57,41 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     super.dispose();
   }
 
-  Future _startLiveFeed() async {
-    final camera = cameras[_cameraIndex];
-    _controller = CameraController(
-      camera,
-      ResolutionPreset.low,
-      enableAudio: false,
-    );
-    await _controller?.initialize();
-
-    _controller?.startImageStream(_processCameraImage);
-    setState(() {});
-  }
-
-  Future _processCameraImage(CameraImage image) async {
-    final WriteBuffer allBytes = WriteBuffer();
-    for (Plane plane in image.planes) {
-      allBytes.putUint8List(plane.bytes);
-    }
-    final bytes = allBytes.done().buffer.asUint8List();
-
-    final Size imageSize =
-        Size(image.width.toDouble(), image.height.toDouble());
-
-    final camera = cameras[_cameraIndex];
-    final imageRotation =
-        InputImageRotationMethods.fromRawValue(camera.sensorOrientation) ??
-            InputImageRotation.Rotation_0deg;
-
-    final inputImageFormat =
-        InputImageFormatMethods.fromRawValue(image.format.raw) ??
-            InputImageFormat.NV21;
-
-    final planeData = image.planes.map(
-      (Plane plane) {
-        return InputImagePlaneMetadata(
-          bytesPerRow: plane.bytesPerRow,
-          height: plane.height,
-          width: plane.width,
-        );
-      },
-    ).toList();
-
-    final inputImageData = InputImageData(
-      size: imageSize,
-      imageRotation: imageRotation,
-      inputImageFormat: inputImageFormat,
-      planeData: planeData,
-    );
-
-    final inputImage =
-        InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
-
-    processImage(inputImage);
-  }
-
   @override
-  Widget build(BuildContext context) {
-    if (_controller?.value.isInitialized == false) {
-      return Container();
-    }
-    return Container(
-      color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          CameraPreview(_controller!),
-          if (customPaint != null) customPaint!,
-        ],
-      ),
+  Widget build(BuildContext ctx) {
+    return CameraView(
+      title: 'Face Detector',
+      customPaint: customPaint,
+      onImage: (inputImage, image) {
+        processImage(inputImage, image);
+      },
+      initialDirection: CameraLensDirection.front,
     );
   }
 
-  Future<void> processImage(InputImage inputImage) async {
+  Future<void> processImage(
+      InputImage inputImage, CameraImage cameraImage) async {
     if (isBusy) return;
     isBusy = true;
     final faces = await faceDetector.processImage(inputImage);
+
+    //Se tiver mais de uma pessoa na frente da camera
+    // if (faces.length > 1) {
+    //   const snackBar = SnackBar(
+    //     content: Text('Existe mais de uma pessoa na frente da camera!'),
+    //   );
+    //ScaffoldMessenger.of().showSnackBar(snackBar);
+    //} else {
+    //Todas as fotas foram tiradas
+    if (isFotoDireita && isFotoEsquerda && isFotoFrente) {
+      proximaFoto = nFINAL;
+      print("Todas as fotos já foram tiradas");
+    }
+    //Não?
+    else {
+      await takeAPicture(proximaFoto, inputImage, cameraImage);
+    }
+    //}
 
     if (inputImage.inputImageData?.size != null &&
         inputImage.inputImageData?.imageRotation != null) {
@@ -153,60 +107,108 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     if (mounted) {
       setState(() {});
     }
-
-    //Todas as fotas foram tiradas
-    if (isFotoDireita && isFotoEsquerda && isFotoFrente) {
-      print("Todas as fotos já foram tiradas");
-      await _controller!.stopImageStream(); //Remover depois
-    }
-    //Não?
-    else {
-      await takeAPicture(proximaFoto, inputImage);
-    }
   }
 
   //Tirar a foto
-  Future<void> takeAPicture(int lado, InputImage inputImage) async {
-    if (lado == nFRENTE) {
+  Future<void> takeAPicture(
+      int lado, InputImage inputImage, CameraImage cimg) async {
+    //Configuracao de variaveis e diretorios
+
+    if (lado == nFRENTE && isFotoFrente == false) {
       setState(() {
         isFotoFrente = true;
         bytesImagemFrente = inputImage.bytes;
         proximaFoto = 0;
-        print("FRENTE caminho da imagem: $bytesImagemFrente");
       });
-      //Pegando os bytes e o path da imagem
-      Uint8List imgbytes = inputImage.bytes!;
-      final dir = File.fromRawPath(imgbytes);
-      //Salvar arquivo temporario
-      final tempFile =
-          File(path.join(dir.path, 'picture_${DateTime.now()}.jpg'));
-      await tempFile.writeAsBytes(imgbytes);
-
-      //Goto pagina exibir imagem
-      print("Path da imagem: ${tempFile.path}");
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => TempFilePage(tempFile: tempFile)),
-      );
+      File fotoFrente = await salvarFoto("frente", cimg, inputImage);
     } else if (lado == nESQUERDA) {
-      setState(() async {
+      setState(() {
         isFotoEsquerda = true;
         bytesImagemEsquerda = inputImage.bytes;
         proximaFoto = 0;
-        print("ESQUERDA caminho da imagem: $bytesImagemEsquerda");
-        print("ESQUERDA caminho da imagem: $bytesImagemEsquerda");
       });
     } else if (lado == nDIREITA) {
       setState(() {
         isFotoDireita = true;
         bytesImagemDireita = inputImage.bytes;
         proximaFoto = nFINAL;
-        print("DIREITA caminho da imagem: $bytesImagemDireita");
-        print("DIREITA caminho da imagem: $bytesImagemDireita");
       });
     }
   }
+
+  Future<File> salvarFoto(
+    String lado,
+    CameraImage cimg,
+    InputImage inputImage,
+  ) async {
+    await convertYUV420toImageColor(cimg, lado);
+    Uint8List imgbytes = inputImage.bytes!;
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    final tempFile =
+        File(path.join(appDocDir.path, 'picture_${DateTime.now()}.jpg'));
+    await tempFile.writeAsBytes(imgbytes);
+    if (await tempFile.exists()) {
+      Image i = Image.file(File(tempFile.path));
+      print('EXISTE, PATH: $i');
+    }
+    return tempFile;
+  }
+}
+
+const shift = (0xFF << 24);
+Future<String> convertYUV420toImageColor(
+    CameraImage image, String nomeImagem) async {
+  var documentDirectory = await getExternalStorageDirectory();
+  try {
+    final int width = image.width;
+    final int height = image.height;
+    final int uvRowStride = image.planes[1].bytesPerRow;
+    final int? uvPixelStride = image.planes[1].bytesPerPixel;
+    print("uvRowStride: " + uvRowStride.toString());
+    print("uvPixelStride: " + uvPixelStride.toString());
+    var img = imglib.Image(width, height); // Create Image buffer
+    // Fill image buffer with plane[0] from YUV420_888
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        final int uvIndex =
+            uvPixelStride! * (x / 2).floor() + uvRowStride * (y / 2).floor();
+        final int index = y * width + x;
+        final yp = image.planes[0].bytes[index];
+        final up = image.planes[1].bytes[uvIndex];
+        final vp = image.planes[2].bytes[uvIndex];
+        int r = (yp + vp * 1436 / 1024 - 179).round().clamp(0, 255);
+        int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
+            .round()
+            .clamp(0, 255);
+        int b = (yp + up * 1814 / 1024 - 227).round().clamp(0, 255);
+        img.data[index] = (0xFF << 24) | (b << 16) | (g << 8) | r;
+      }
+    }
+    imglib.PngEncoder pngEncoder = imglib.PngEncoder(level: 0, filter: 0);
+    List<int> png = pngEncoder.encodeImage(img);
+    var originalImage = imglib.decodeImage(png);
+    final height1 = originalImage?.height ?? 1;
+    final width1 = originalImage?.width ?? 1;
+    imglib.Image fixedImage;
+    if (height1 < width1) {
+      originalImage = imglib.copyRotate(originalImage!, 270);
+    }
+    var ph = await getExternalStorageDirectory();
+    String? p = ph?.path;
+    final path = join(p!, "$nomeImagem.jpg");
+    print(path);
+    File(path).writeAsBytesSync(imglib.encodeJpg(originalImage!));
+    return path;
+  } catch (e) {
+    print(">>>>>>>>>>>> ERROR:" + e.toString());
+  }
+  Image i = Image.asset(
+    'images/lake.jpg',
+    width: 600.0,
+    height: 240.0,
+    fit: BoxFit.cover,
+  );
+  return '';
 }
 
 class FaceDetectorPainter extends CustomPainter {
