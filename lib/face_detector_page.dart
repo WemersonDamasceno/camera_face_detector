@@ -15,10 +15,6 @@ bool isFotoEsquerda = false;
 bool isFotoDireita = false;
 bool isFotoFrente = false;
 
-var bytesImagemFrente;
-var bytesImagemEsquerda;
-var bytesImagemDireita;
-
 const int nFRENTE = 1;
 const int nESQUERDA = 2;
 const int nDIREITA = 3;
@@ -40,12 +36,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   bool isBusy = false;
   CustomPaint? customPaint;
 
-  /*Camera View*/
-  //CAMERA TRASEIRA É 0
-  //CAMERA FRONTAL É 1
-  final int _cameraIndex = 1;
-  /*Camera View*/
-
   @override
   void initState() {
     super.initState();
@@ -60,7 +50,6 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   @override
   Widget build(BuildContext ctx) {
     return CameraView(
-      title: 'Face Detector',
       customPaint: customPaint,
       onImage: (inputImage, image) {
         processImage(inputImage, image);
@@ -70,28 +59,31 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   }
 
   Future<void> processImage(
-      InputImage inputImage, CameraImage cameraImage) async {
+    InputImage inputImage,
+    CameraImage cameraImage,
+  ) async {
     if (isBusy) return;
     isBusy = true;
     final faces = await faceDetector.processImage(inputImage);
 
     //Se tiver mais de uma pessoa na frente da camera
-    // if (faces.length > 1) {
-    //   const snackBar = SnackBar(
-    //     content: Text('Existe mais de uma pessoa na frente da camera!'),
-    //   );
-    //ScaffoldMessenger.of().showSnackBar(snackBar);
-    //} else {
-    //Todas as fotas foram tiradas
-    if (isFotoDireita && isFotoEsquerda && isFotoFrente) {
-      proximaFoto = nFINAL;
-      print("Todas as fotos já foram tiradas");
+    if (faces.length > 1) {
+      const snackBar = SnackBar(
+        content: Text('Existe mais de uma pessoa na frente da camera!'),
+      );
+      ScaffoldMessenger.of(this.context).showSnackBar(snackBar);
+    } else {
+      //Todas as fotas foram tiradas
+      if (isFotoDireita && isFotoEsquerda && isFotoFrente) {
+        proximaFoto = nFINAL;
+        print("Todas as fotos já foram tiradas");
+        //Enviar pra api
+      }
+      //Não?
+      else {
+        await takeAPicture(proximaFoto, inputImage, cameraImage);
+      }
     }
-    //Não?
-    else {
-      await takeAPicture(proximaFoto, inputImage, cameraImage);
-    }
-    //}
 
     if (inputImage.inputImageData?.size != null &&
         inputImage.inputImageData?.imageRotation != null) {
@@ -111,28 +103,28 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
 
   //Tirar a foto
   Future<void> takeAPicture(
-      int lado, InputImage inputImage, CameraImage cimg) async {
-    //Configuracao de variaveis e diretorios
-
+    int lado,
+    InputImage inputImage,
+    CameraImage cameraImage,
+  ) async {
     if (lado == nFRENTE && isFotoFrente == false) {
       setState(() {
         isFotoFrente = true;
-        bytesImagemFrente = inputImage.bytes;
         proximaFoto = 0;
       });
-      File fotoFrente = await salvarFoto("frente", cimg, inputImage);
-    } else if (lado == nESQUERDA) {
+      File fotoFrente = await salvarFoto("frente", cameraImage, inputImage);
+    } else if (lado == nESQUERDA && isFotoEsquerda == false) {
       setState(() {
         isFotoEsquerda = true;
-        bytesImagemEsquerda = inputImage.bytes;
         proximaFoto = 0;
       });
-    } else if (lado == nDIREITA) {
+      File fotoEsquerda = await salvarFoto("esquerda", cameraImage, inputImage);
+    } else if (lado == nDIREITA && isFotoDireita == false) {
       setState(() {
         isFotoDireita = true;
-        bytesImagemDireita = inputImage.bytes;
         proximaFoto = nFINAL;
       });
+      File fotoDireita = await salvarFoto("direita", cameraImage, inputImage);
     }
   }
 

@@ -10,13 +10,11 @@ CameraController? _controller;
 class CameraView extends StatefulWidget {
   const CameraView(
       {Key? key,
-      required this.title,
       required this.customPaint,
       required this.onImage,
       this.initialDirection = CameraLensDirection.front})
       : super(key: key);
 
-  final String title;
   final CustomPaint? customPaint;
   final Function(InputImage inputImage, CameraImage img) onImage;
   final CameraLensDirection initialDirection;
@@ -42,9 +40,6 @@ class _CameraViewState extends State<CameraView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
       body: _liveFeedBody(),
     );
   }
