@@ -18,7 +18,7 @@ class CameraView extends StatefulWidget {
 
   final String title;
   final CustomPaint? customPaint;
-  final Function(InputImage inputImage) onImage;
+  final Function(InputImage inputImage, CameraImage img) onImage;
   final CameraLensDirection initialDirection;
 
   @override
@@ -81,6 +81,10 @@ class _CameraViewState extends State<CameraView> {
     });
   }
 
+
+
+
+
   Future _processCameraImage(CameraImage image) async {
     final WriteBuffer allBytes = WriteBuffer();
     for (Plane plane in image.planes) {
@@ -120,6 +124,6 @@ class _CameraViewState extends State<CameraView> {
     final inputImage =
         InputImage.fromBytes(bytes: bytes, inputImageData: inputImageData);
 
-    widget.onImage(inputImage);
+    widget.onImage(inputImage, image);
   }
 }
