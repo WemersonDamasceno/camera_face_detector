@@ -8,14 +8,20 @@ import 'main.dart';
 CameraController? _controller;
 
 class CameraView extends StatefulWidget {
-  const CameraView(
-      {Key? key,
-      required this.customPaint,
-      required this.onImage,
-      this.initialDirection = CameraLensDirection.front})
-      : super(key: key);
+  const CameraView({
+    Key? key,
+    required this.customPaint,
+    required this.onImage,
+    this.initialDirection = CameraLensDirection.front,
+    required this.buttonWidget,
+    required this.getFrase,
+    required this.getPosicao,
+  }) : super(key: key);
 
   final CustomPaint? customPaint;
+  final Widget buttonWidget;
+  final String getFrase;
+  final int getPosicao;
   final Function(InputImage inputImage, CameraImage img) onImage;
   final CameraLensDirection initialDirection;
 
@@ -50,6 +56,7 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
+    var posicao = widget.getPosicao;
     if (_controller?.value.isInitialized == false) {
       return Container();
     }
@@ -65,41 +72,80 @@ class _CameraViewState extends State<CameraView> {
               child: Stack(
                 fit: StackFit.expand,
                 children: <Widget>[
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(400),
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 4,
-                        style: BorderStyle.solid,
+                  Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(400),
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 4,
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(400)),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius:
-                          const BorderRadius.all(Radius.circular(400)),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: CameraPreview(_controller!),
-                      ),
-                    ),
+                      widget.getPosicao == 0 || widget.getPosicao == 4
+                          ? Container()
+                          : widget.getPosicao == 1
+                              ? Positioned(
+                                  top: 110,
+                                  left: 190,
+                                  child: RotatedBox(
+                                    quarterTurns: 0,
+                                    child: Image.asset(
+                                      "assets/gif_seta.gif",
+                                      height: 80,
+                                      width: 180,
+                                      color: Colors.purple,
+                                    ),
+                                  ),
+                                )
+                              : widget.getPosicao == 3
+                                  ? Positioned(
+                                      top: 110,
+                                      right: 190,
+                                      child: RotatedBox(
+                                        quarterTurns: 2,
+                                        child: Image.asset(
+                                          "assets/gif_seta.gif",
+                                          height: 80,
+                                          width: 180,
+                                          color: Colors.purple,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(),
+                    ],
                   ),
                   if (widget.customPaint != null) widget.customPaint!,
                 ],
               ),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.only(top: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
             child: Text(
-              "Mova sua cabeça lentamente para o lado direito!",
+              widget.getFrase,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-          )
+          ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width,
+            child: widget.buttonWidget,
+          ),
         ],
       ),
     );
