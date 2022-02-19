@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
 import 'package:flutter/foundation.dart';
@@ -8,6 +10,13 @@ import 'main.dart';
 CameraController? _controller;
 
 class CameraView extends StatefulWidget {
+  final CustomPaint? customPaint;
+  final Widget buttonWidget;
+  final String getFrase;
+  final int getPosicao;
+  final Function(InputImage inputImage, CameraImage img) onImage;
+  final CameraLensDirection initialDirection;
+
   const CameraView({
     Key? key,
     required this.customPaint,
@@ -17,13 +26,6 @@ class CameraView extends StatefulWidget {
     required this.getFrase,
     required this.getPosicao,
   }) : super(key: key);
-
-  final CustomPaint? customPaint;
-  final Widget buttonWidget;
-  final String getFrase;
-  final int getPosicao;
-  final Function(InputImage inputImage, CameraImage img) onImage;
-  final CameraLensDirection initialDirection;
 
   @override
   _CameraViewState createState() => _CameraViewState();
@@ -56,7 +58,6 @@ class _CameraViewState extends State<CameraView> {
   }
 
   Widget _liveFeedBody() {
-    var posicao = widget.getPosicao;
     if (_controller?.value.isInitialized == false) {
       return Container();
     }
@@ -92,6 +93,30 @@ class _CameraViewState extends State<CameraView> {
                           ),
                         ),
                       ),
+                      // //Dialog contagem
+                      // widget.isExibirDialog
+                      //     ? AlertDialog(
+                      //         backgroundColor: Colors.transparent,
+                      //         elevation: 0,
+                      //         title: SizedBox(
+                      //           width: MediaQuery.of(context).size.width,
+                      //           child: Align(
+                      //             alignment: Alignment.center,
+                      //             child: Text(
+                      //               "${widget.counter}",
+                      //               style: const TextStyle(
+                      //                 fontSize: 50,
+                      //                 fontWeight: FontWeight.w700,
+                      //               ),
+                      //             ),
+                      //           ),
+                      //         ),
+                      //         alignment: Alignment.center,
+                      //       )
+                      //     : Container(),
+                      // //Dialog contagem
+
+                      //Setas de instrução
                       widget.getPosicao == 0 || widget.getPosicao == 4
                           ? Container()
                           : widget.getPosicao == 1
