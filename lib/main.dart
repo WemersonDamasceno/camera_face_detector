@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
+import 'cronometro_page.dart';
 import 'face_detector_page.dart';
 
 List<CameraDescription> cameras = [];
@@ -55,6 +56,25 @@ class HomeScreen extends StatelessWidget {
                           MaterialPageRoute(
                               builder: (context) => const FaceDetectorView()));
                     },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: ListTile(
+                      tileColor: Theme.of(context).primaryColor,
+                      title: const Text(
+                        'Dialog Cronometro Regressivo',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CronometroPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),

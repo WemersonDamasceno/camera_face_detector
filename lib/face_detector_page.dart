@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -7,13 +7,23 @@ import 'package:camera_process/camera_process.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'camera_view.dart';
 import 'package:image/image.dart' as imglib;
 
-int qtdFoto = 0;
-bool isFotoEsquerda = false;
-bool isFotoDireita = false;
-bool isFotoFrente = false;
+import 'camera_view.dart';
+
+int nNextPhoto = 0;
+bool isPhotoLeft = false;
+bool isPhotoRight = false;
+bool isPhotoFront = false;
+bool isStartTakePhotos = false;
+
+const int nSTART = 0;
+const int nFRONT = 1;
+const int nLEFT = 2;
+const int nRIGHT = 3;
+const int nEND = 4;
+
+String getFraseInstrucao = "Procure um local iluminado e clique em iniciar.";
 
 class FaceDetectorView extends StatefulWidget {
   const FaceDetectorView({Key? key}) : super(key: key);
@@ -23,13 +33,19 @@ class FaceDetectorView extends StatefulWidget {
 }
 
 class _FaceDetectorViewState extends State<FaceDetectorView> {
-  FaceDetector faceDetector =
-      CameraProcess.vision.faceDetector(const FaceDetectorOptions(
-    enableContours: true,
-    enableClassification: true,
-  ));
+  FaceDetector faceDetector = CameraProcess.vision.faceDetector(
+    const FaceDetectorOptions(
+      enableContours: true,
+      enableClassification: true,
+    ),
+  );
   bool isBusy = false;
   CustomPaint? customPaint;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -38,9 +54,11 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext ctx) {
     return CameraView(
-      title: 'Face Detector',
+      getPosicao: nNextPhoto,
+      getFrase: getFraseInstrucao,
+      buttonWidget: buttonWidget(),
       customPaint: customPaint,
       onImage: (inputImage, image) {
         processImage(inputImage, image);
@@ -49,48 +67,61 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
     );
   }
 
-  Future<void> processImage(InputImage inputImage, CameraImage cimg) async {
+  Widget buttonWidget() {
+    return nNextPhoto == nSTART || nNextPhoto == nEND
+        ? ElevatedButton(
+            onPressed: () {
+              if (nNextPhoto == nSTART) {
+                setState(() {
+                  isStartTakePhotos = true;
+                  getFraseInstrucao =
+                      "Mantenha sua cabeça no centro do circulo.";
+                  nNextPhoto = nFRONT;
+                });
+              } else if (nNextPhoto == nEND) {
+                setState(() {
+                  getFraseInstrucao =
+                      "Parabéns você finalizou seu reconhecimento facial.";
+                  //Enviar pra proxima tela
+                });
+              }
+            },
+            child: Text(
+              nNextPhoto == nSTART ? "Iniciar" : "Continuar",
+              style: const TextStyle(fontSize: 17),
+            ),
+          )
+        : Container();
+  }
+
+  Future<void> processImage(
+    InputImage inputImage,
+    CameraImage cameraImage,
+  ) async {
     if (isBusy) return;
     isBusy = true;
     final faces = await faceDetector.processImage(inputImage);
-    // final CameraController? cameraController = controller;
-    CameraController controller;
-    List<CameraDescription> cameras = [];
 
-    print(inputImage.filePath);
-
-    //WidgetsFlutterBinding.ensureInitialized();
-    //cameras = await availableCameras();
-    print(inputImage.inputImageData?.inputImageFormat);
-
-    print(inputImage.inputImageData);
-    //controller = CameraController(cameras[1], ResolutionPreset.max);
-    if (qtdFoto == 0) {
-      //controller.takePicture();
-
-      String img = await convertYUV420toImageColor(cimg);
-
-      Uint8List imgbytes = inputImage.bytes!;
-      //Salvar arquivo temporario
-
-      Directory appDocDir = await getApplicationDocumentsDirectory();
-
-      final tempFile =
-          File(path.join(appDocDir.path, 'picture_${DateTime.now()}.jpg'));
-      await tempFile.writeAsBytes(imgbytes);
-      if (await tempFile.exists()) {
-        Image i = Image.file(File(tempFile.path));
-        print('existe');
-      }
-      print("Path da imagem: ${tempFile.path}");
-    }
-
-    if (faces.length > 1) {
+    //Se tiver mais de uma pessoa na frente da camera
+    if (faces.length >= 2) {
       const snackBar = SnackBar(
         content: Text('Existe mais de uma pessoa na frente da camera!'),
       );
-      // ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      ScaffoldMessenger.of(this.context).showSnackBar(snackBar);
+    } else {
+      if (isStartTakePhotos) {
+        //Todas as fotas foram tiradas
+        if (isPhotoRight && isPhotoLeft && isPhotoFront) {
+          nNextPhoto = nEND;
+          // ignore: avoid_print
+          print("Todas as fotos já foram tiradas");
+          //TODO Enviar as fotos pra api
+        } else {
+          await takeAPicture(inputImage, cameraImage);
+        }
+      }
     }
+
     if (inputImage.inputImageData?.size != null &&
         inputImage.inputImageData?.imageRotation != null) {
       final painter = FaceDetectorPainter(
@@ -106,18 +137,64 @@ class _FaceDetectorViewState extends State<FaceDetectorView> {
       setState(() {});
     }
   }
+
+  //Tirar a foto
+  Future<void> takeAPicture(
+    InputImage inputImage,
+    CameraImage cameraImage,
+  ) async {
+    if (nNextPhoto == nFRONT && !isPhotoFront) {
+      setState(() {
+        isPhotoFront = true;
+        getFraseInstrucao = "Mova sua cabeça lentamente para o lado direito.";
+      });
+      File fotoFrente = await salvarFoto("frente", cameraImage, inputImage);
+    } else if (nNextPhoto == nRIGHT && !isPhotoRight) {
+      setState(() {
+        getFraseInstrucao = "Mova sua cabeça lentamente para o lado esquerdo.";
+        isPhotoRight = true;
+      });
+      File fotoDireita = await salvarFoto("direita", cameraImage, inputImage);
+    } else if (nNextPhoto == nLEFT && !isPhotoLeft) {
+      setState(() {
+        getFraseInstrucao =
+            "Parabéns você finalizou seu reconhecimento facial.";
+        isPhotoLeft = true;
+      });
+      File fotoEsquerda = await salvarFoto("esquerda", cameraImage, inputImage);
+    }
+  }
+
+  Future<File> salvarFoto(
+    String lado,
+    CameraImage cimg,
+    InputImage inputImage,
+  ) async {
+    await convertYUV420toImageColor(cimg, lado);
+    Uint8List imgbytes = inputImage.bytes!;
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    final tempFile =
+        File(path.join(appDocDir.path, 'picture_${DateTime.now()}.jpg'));
+    await tempFile.writeAsBytes(imgbytes);
+    if (await tempFile.exists()) {
+      Image i = Image.file(File(tempFile.path));
+      print('EXISTE, PATH: $i');
+    }
+    return tempFile;
+  }
 }
 
 const shift = (0xFF << 24);
-Future<String> convertYUV420toImageColor(CameraImage image) async {
-  var documentDirectory = await getExternalStorageDirectory();
+Future<String> convertYUV420toImageColor(
+    CameraImage image, String nomeImagem) async {
+  //var documentDirectory = await getExternalStorageDirectory();
   try {
     final int width = image.width;
     final int height = image.height;
     final int uvRowStride = image.planes[1].bytesPerRow;
     final int? uvPixelStride = image.planes[1].bytesPerPixel;
-    print("uvRowStride: " + uvRowStride.toString());
-    print("uvPixelStride: " + uvPixelStride.toString());
+    // print("uvRowStride: " + uvRowStride.toString());
+    // print("uvPixelStride: " + uvPixelStride.toString());
     var img = imglib.Image(width, height); // Create Image buffer
     // Fill image buffer with plane[0] from YUV420_888
     for (int x = 0; x < width; x++) {
@@ -141,25 +218,25 @@ Future<String> convertYUV420toImageColor(CameraImage image) async {
     var originalImage = imglib.decodeImage(png);
     final height1 = originalImage?.height ?? 1;
     final width1 = originalImage?.width ?? 1;
-    imglib.Image fixedImage;
+    //imglib.Image fixedImage;
     if (height1 < width1) {
       originalImage = imglib.copyRotate(originalImage!, 270);
     }
     var ph = await getExternalStorageDirectory();
     String? p = ph?.path;
-    final path = join(p!, "teste.jpg");
-    print(path);
+    final path = join(p!, "$nomeImagem.jpg");
+    //print(path);
     File(path).writeAsBytesSync(imglib.encodeJpg(originalImage!));
     return path;
   } catch (e) {
     print(">>>>>>>>>>>> ERROR:" + e.toString());
   }
-  Image i = Image.asset(
-    'images/lake.jpg',
-    width: 600.0,
-    height: 240.0,
-    fit: BoxFit.cover,
-  );
+  // Image i = Image.asset(
+  //   'images/lake.jpg',
+  //   width: 600.0,
+  //   height: 240.0,
+  //   fit: BoxFit.cover,
+  // );
   return '';
 }
 
@@ -172,72 +249,34 @@ class FaceDetectorPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = Colors.purple;
-
     for (final Face face in faces) {
-      //Desenhar o retangulo
-      canvas.drawRect(
-        Rect.fromLTRB(
-          translateX(face.boundingBox.left, rotation, size, absoluteImageSize),
-          translateY(face.boundingBox.top, rotation, size, absoluteImageSize),
-          translateX(face.boundingBox.right, rotation, size, absoluteImageSize),
-          translateY(
-              face.boundingBox.bottom, rotation, size, absoluteImageSize),
-        ),
-        paint,
-      );
-
       void paintContour(FaceContourType type) async {
         final faceContour = face.getContour(type);
-
         for (Offset point in faceContour!.positionsList) {
-          //Se o nariz for pro canto direito
           if (type == FaceContourType.noseBottom) {
-            //Quando virar o rosto pra direita ou pra esquerda
-            if (qtdFoto == 0) {
-              if (point.dx < 80) {
-                //qtdFoto = 1;
-                print("Moveu para a direita: $point");
-                print("QTD: $qtdFoto");
-              } else if (point.dx > 150) {
-                print("Moveu para a esquerda: $point");
-                //qtdFoto = 1;
-                print("QTD: $qtdFoto");
-                //imagem = await _controller?.takePicture();
+            //Tirar primeiro foto da frente
+            if (point.dx < 130 && point.dx > 95) {
+              if (!isPhotoFront) {
+                if (isStartTakePhotos) {
+                  nNextPhoto = nFRONT;
+                }
+              }
+            }
+            //Tirar foto da direita
+            else if (point.dx < 80) {
+              if (!isPhotoRight && !isPhotoLeft && isPhotoFront) {
+                nNextPhoto = nRIGHT;
+              }
+            } else if (point.dx > 150) {
+              if (!isPhotoLeft && isPhotoRight && isPhotoFront) {
+                nNextPhoto = nLEFT;
               }
             }
           }
-          //Pintar os pontos
-
-          // canvas.drawCircle(
-          //     Offset(
-          //       translateX(point.dx, rotation, size, absoluteImageSize),
-          //       translateY(point.dy, rotation, size, absoluteImageSize),
-          //     ),
-          //     1,
-          //     paint);
         }
       }
 
       paintContour(FaceContourType.noseBottom);
-
-      //paintContour(FaceContourType.face);
-      // paintContour(FaceContourType.leftEyebrowTop);
-      // paintContour(FaceContourType.leftEyebrowBottom);
-      // paintContour(FaceContourType.rightEyebrowTop);
-      // paintContour(FaceContourType.rightEyebrowBottom);
-      // paintContour(FaceContourType.leftEye);
-      // paintContour(FaceContourType.rightEye);
-      // paintContour(FaceContourType.upperLipTop);
-      // paintContour(FaceContourType.upperLipBottom);
-      // paintContour(FaceContourType.lowerLipTop);
-      // paintContour(FaceContourType.lowerLipBottom);
-      // paintContour(FaceContourType.noseBridge);
-      // paintContour(FaceContourType.leftCheek);
-      // paintContour(FaceContourType.rightCheek);
     }
   }
 
@@ -245,37 +284,5 @@ class FaceDetectorPainter extends CustomPainter {
   bool shouldRepaint(FaceDetectorPainter oldDelegate) {
     return oldDelegate.absoluteImageSize != absoluteImageSize ||
         oldDelegate.faces != faces;
-  }
-}
-
-double translateX(
-    double x, InputImageRotation rotation, Size size, Size absoluteImageSize) {
-  switch (rotation) {
-    case InputImageRotation.Rotation_90deg:
-      return x *
-          size.width /
-          (Platform.isIOS ? absoluteImageSize.width : absoluteImageSize.height);
-    case InputImageRotation.Rotation_270deg:
-      return size.width -
-          x *
-              size.width /
-              (Platform.isIOS
-                  ? absoluteImageSize.width
-                  : absoluteImageSize.height);
-    default:
-      return x * size.width / absoluteImageSize.width;
-  }
-}
-
-double translateY(
-    double y, InputImageRotation rotation, Size size, Size absoluteImageSize) {
-  switch (rotation) {
-    case InputImageRotation.Rotation_90deg:
-    case InputImageRotation.Rotation_270deg:
-      return y *
-          size.height /
-          (Platform.isIOS ? absoluteImageSize.height : absoluteImageSize.width);
-    default:
-      return y * size.height / absoluteImageSize.height;
   }
 }

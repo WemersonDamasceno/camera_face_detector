@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:camera_process/camera_process.dart';
 import 'package:flutter/foundation.dart';
@@ -8,18 +10,22 @@ import 'main.dart';
 CameraController? _controller;
 
 class CameraView extends StatefulWidget {
-  const CameraView(
-      {Key? key,
-      required this.title,
-      required this.customPaint,
-      required this.onImage,
-      this.initialDirection = CameraLensDirection.front})
-      : super(key: key);
-
-  final String title;
   final CustomPaint? customPaint;
+  final Widget buttonWidget;
+  final String getFrase;
+  final int getPosicao;
   final Function(InputImage inputImage, CameraImage img) onImage;
   final CameraLensDirection initialDirection;
+
+  const CameraView({
+    Key? key,
+    required this.customPaint,
+    required this.onImage,
+    this.initialDirection = CameraLensDirection.front,
+    required this.buttonWidget,
+    required this.getFrase,
+    required this.getPosicao,
+  }) : super(key: key);
 
   @override
   _CameraViewState createState() => _CameraViewState();
@@ -42,8 +48,10 @@ class _CameraViewState extends State<CameraView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF161616),
       appBar: AppBar(
-        title: Text(widget.title),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: _liveFeedBody(),
     );
@@ -53,13 +61,116 @@ class _CameraViewState extends State<CameraView> {
     if (_controller?.value.isInitialized == false) {
       return Container();
     }
-    return Container(
-      color: Colors.black,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          CameraPreview(_controller!),
-          if (widget.customPaint != null) widget.customPaint!,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: SizedBox(
+              height: 320,
+              width: 400,
+              child: Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(400),
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 4,
+                            style: BorderStyle.solid,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(400)),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
+                      ),
+                      // //Dialog contagem
+                      // widget.isExibirDialog
+                      //     ? AlertDialog(
+                      //         backgroundColor: Colors.transparent,
+                      //         elevation: 0,
+                      //         title: SizedBox(
+                      //           width: MediaQuery.of(context).size.width,
+                      //           child: Align(
+                      //             alignment: Alignment.center,
+                      //             child: Text(
+                      //               "${widget.counter}",
+                      //               style: const TextStyle(
+                      //                 fontSize: 50,
+                      //                 fontWeight: FontWeight.w700,
+                      //               ),
+                      //             ),
+                      //           ),
+                      //         ),
+                      //         alignment: Alignment.center,
+                      //       )
+                      //     : Container(),
+                      // //Dialog contagem
+
+                      //Setas de instrução
+                      widget.getPosicao == 0 || widget.getPosicao == 4
+                          ? Container()
+                          : widget.getPosicao == 1
+                              ? Positioned(
+                                  top: 110,
+                                  left: 190,
+                                  child: RotatedBox(
+                                    quarterTurns: 0,
+                                    child: Image.asset(
+                                      "assets/gif_seta.gif",
+                                      height: 80,
+                                      width: 180,
+                                      color: Colors.purple,
+                                    ),
+                                  ),
+                                )
+                              : widget.getPosicao == 3
+                                  ? Positioned(
+                                      top: 110,
+                                      right: 190,
+                                      child: RotatedBox(
+                                        quarterTurns: 2,
+                                        child: Image.asset(
+                                          "assets/gif_seta.gif",
+                                          height: 80,
+                                          width: 180,
+                                          color: Colors.purple,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(),
+                    ],
+                  ),
+                  if (widget.customPaint != null) widget.customPaint!,
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Text(
+              widget.getFrase,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width,
+            child: widget.buttonWidget,
+          ),
         ],
       ),
     );
@@ -80,10 +191,6 @@ class _CameraViewState extends State<CameraView> {
       setState(() {});
     });
   }
-
-
-
-
 
   Future _processCameraImage(CameraImage image) async {
     final WriteBuffer allBytes = WriteBuffer();
